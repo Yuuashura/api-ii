@@ -1,33 +1,44 @@
 import express from 'express';
-// Mengimpor data dari db.js
-import db from '../db.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-// Membuat router baru
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const router = express.Router();
 
-// Rute untuk mendapatkan SEMUA resep
-// Endpoint: GET /recipes
-router.get('/', (req, res) => {
-  res.json(db);
-});
+const readPageData = (pageNumber) => {
+  const filePath = path.join(__dirname, '..', 'data', `${pageNumber}.json`);
+  if (fs.existsSync(filePath)) {
+    const jsonData = fs.readFileSync(filePath, 'utf-8');
+    return JSON.parse(jsonData);
+  }
+  return null;
+};
 
-// Rute untuk mendapatkan SATU resep berdasarkan ID
-// Endpoint: GET /recipes/1, /recipes/2, dst.
-router.get('/:id', (req, res) => {
-  // Mengambil ID dari parameter URL dan mengubahnya menjadi angka
-  const recipeId = parseInt(req.params.id, 10);
-  
-  // Mencari resep di dalam database
-  const recipe = db.data.find(r => r.id === recipeId);
 
-  if (recipe) {
-    // Jika resep ditemukan, kirim sebagai respons
-    res.json(recipe);
+router.get('/:page', (req, res) => {
+  const paintingId = req.params.page;
+
+  const painting = readPageData(paintingId);
+
+  if (painting) {
+    res.json(painting);
   } else {
-    // Jika tidak ditemukan, kirim status 404 Not Found
-    res.status(404).json({ message: 'Resep tidak ditemukan' });
+    res.status(404).json({ message: 'vocab tidak ditemukan' });
   }
 });
 
-// Mengekspor router agar bisa digunakan di server.js
+// Endpoint default (mengarah ke halaman 1)
+// Contoh: /paintings
+router.get('/', (req, res) => {
+  const data = readPageData(1);
+  if (data) {
+    res.json(data);
+  } else {
+    res.status(404).json({ message: 'Data halaman pertama tidak ditemukan.' });
+  }
+});
+
 export default router;
